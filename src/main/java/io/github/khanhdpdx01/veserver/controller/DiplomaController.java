@@ -75,7 +75,6 @@ public class DiplomaController {
     @GetMapping("/search")
     public ResponseEntity<?> lookUp(LookUpDiplomaDTO params) {
         List<DiplomaDTO> diplomas = diplomaService.lookUpDiploma(params);
-        System.out.println(params.getSerialNumber());
         return ResponseEntity.status(200).body(diplomas);
     }
 

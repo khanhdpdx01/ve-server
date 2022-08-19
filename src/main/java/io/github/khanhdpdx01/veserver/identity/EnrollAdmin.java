@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package io.github.khanhdpdx01.veserver.fabric;
+package io.github.khanhdpdx01.veserver.identity;
 
 
 import org.hyperledger.fabric.gateway.Identities;

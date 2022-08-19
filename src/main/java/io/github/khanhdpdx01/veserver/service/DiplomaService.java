@@ -7,8 +7,8 @@ import io.github.khanhdpdx01.veserver.dto.diploma.DiplomaDTO;
 import io.github.khanhdpdx01.veserver.dto.diploma.LookUpDiplomaDTO;
 import io.github.khanhdpdx01.veserver.dto.diploma.VDiploma;
 import io.github.khanhdpdx01.veserver.entity.*;
-import io.github.khanhdpdx01.veserver.fabric.EnrollAdmin;
-import io.github.khanhdpdx01.veserver.fabric.RegisterUser;
+import io.github.khanhdpdx01.veserver.identity.EnrollAdmin;
+import io.github.khanhdpdx01.veserver.identity.RegisterUser;
 import io.github.khanhdpdx01.veserver.repository.MajorRepository;
 import io.github.khanhdpdx01.veserver.repository.SpecialityRepository;
 import org.hyperledger.fabric.gateway.*;
@@ -18,6 +18,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -54,19 +56,15 @@ public class DiplomaService {
         EnrollAdmin.main(null);
         RegisterUser.main(null);
 
-        try (Gateway gateway = connect()) {
-            Network network = gateway.getNetwork("mychannel");
-            Contract contract = network.getContract("chaincode");
-//
-//            System.out.println("Submit Transaction: InitLedger creates the initial set of assets on the ledger.");
-//			contract.submitTransaction("InitLedger");
+        Gateway gateway = connect();
+        Network network = gateway.getNetwork("mychannel");
+        Contract contract = network.getContract("chaincode");
 
-            System.out.println("\n");
-            result = contract.evaluateTransaction("getAllDiplomas");
+        System.out.println("\n");
+        result = contract.evaluateTransaction("getAllDiplomas");
 
-            vdiplomas = new ObjectMapper().readValue(new String(result), new TypeReference<List<VDiploma>>() {
-            });
-        }
+        vdiplomas = new ObjectMapper().readValue(new String(result), new TypeReference<List<VDiploma>>() {
+        });
 
         return mapList(vdiplomas);
     }
@@ -87,7 +85,8 @@ public class DiplomaService {
             System.out.println(e.getMessage());
         }
 
-        try (Gateway gateway = connect()) {
+        try {
+            Gateway gateway = connect();
             Network network = gateway.getNetwork("mychannel");
             Contract contract = network.getContract("chaincode");
 //
@@ -97,9 +96,9 @@ public class DiplomaService {
             System.out.println("\n");
             result = contract.submitTransaction("createDiploma",
                     addDiplomaForm.getSerialNumber(),
-                    addDiplomaForm.getUserId(),
-                    addDiplomaForm.getFirstName(),
-                    addDiplomaForm.getLastName(),
+                    addDiplomaForm.getUserId().trim(),
+                    addDiplomaForm.getFirstName().trim(),
+                    addDiplomaForm.getLastName().trim(),
                     formatter.format(addDiplomaForm.getDateOfBirth()),
                     addDiplomaForm.isGender() ? "Nam" : "Nữ",
                     addDiplomaForm.getPlaceOfBirth(),
@@ -138,30 +137,26 @@ public class DiplomaService {
         }
 
         byte[] result = new byte[0];
-        try (Gateway gateway = connect()) {
+        try {
+            Gateway gateway = connect();
             Network network = gateway.getNetwork("mychannel");
             Contract contract = network.getContract("chaincode");
 
-            if (lookUpDiplomaDTO.getSerialNumber() != null) {
+            if (lookUpDiplomaDTO.getSerialNumber() != null && !lookUpDiplomaDTO.getSerialNumber().isEmpty()) {
                 result = contract.evaluateTransaction("searchBySerialNumber", lookUpDiplomaDTO.getSerialNumber());
 
 //                VDiploma diploma = genson.deserialize(result, VDiploma.class);
                 VDiploma diploma = new ObjectMapper().readValue(new String(result), VDiploma.class);
                 diplomaDTOs.add(map(diploma));
             } else {
+                LocalDate localDate = LocalDate.parse(lookUpDiplomaDTO.getDateOfBirth());
                 result = contract.evaluateTransaction("searchByPersonalInfo", lookUpDiplomaDTO.getFirstName(),
                         lookUpDiplomaDTO.getLastName(),
-                        lookUpDiplomaDTO.getDateOfBirth().toString());
-//                System.out.println(lookUpDiplomaDTO);
-//                List<Diploma> diplomas = diplomaRepository.findByPersonalInfo(lookUpDiplomaDTO.getFirstName(),
-//                                lookUpDiplomaDTO.getLastName(),
-//                                lookUpDiplomaDTO.getDateOfBirth())
-//                        .orElseThrow(() -> new RuntimeException("Diploma not found"));
-//
-//                if (diplomas != null) {
-//                    diplomaDTOs = mapList(diplomas);
-//                }
+                        localDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
 
+                System.out.println(new String((result)));
+                diplomaDTOs.addAll(mapList(new ObjectMapper().readValue(new String(result), new TypeReference<List<VDiploma>>() {
+                })));
             }
 
         } catch (Exception e) {
@@ -183,7 +178,8 @@ public class DiplomaService {
         }
 
         byte[] result = new byte[0];
-        try (Gateway gateway = connect()) {
+        try {
+            Gateway gateway = connect();
             Network network = gateway.getNetwork("mychannel");
             Contract contract = network.getContract("chaincode");
 
