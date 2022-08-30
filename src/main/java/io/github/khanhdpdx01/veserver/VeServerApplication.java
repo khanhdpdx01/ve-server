@@ -22,5 +22,4 @@ public class VeServerApplication {
     public static void main(String[] args) {
         SpringApplication.run(VeServerApplication.class, args);
     }
-
 }

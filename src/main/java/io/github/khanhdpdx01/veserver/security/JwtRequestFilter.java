@@ -22,7 +22,6 @@ import static io.github.khanhdpdx01.veserver.constant.AppConstant.ACCESS_TOKEN_C
 
 @Component
 public class JwtRequestFilter extends OncePerRequestFilter {
-
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
 
@@ -60,5 +59,5 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
-
 }
+

@@ -1,22 +1,40 @@
 package io.github.khanhdpdx01.veserver.controller;
 
+import io.github.khanhdpdx01.veserver.dto.pagination.PaginationParams;
+import io.github.khanhdpdx01.veserver.dto.pagination.PaginationResponse;
+import io.github.khanhdpdx01.veserver.dto.user.UpdateUser;
+import io.github.khanhdpdx01.veserver.dto.user.UserDTO;
+import io.github.khanhdpdx01.veserver.service.UserService;
+import io.github.khanhdpdx01.veserver.util.PaginationAndSortUtil;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
 
 @RestController
 @RequestMapping("admin")
 public class UserController {
-    @GetMapping
-    public ResponseEntity<?> getAdmin() {
-        return ResponseEntity.status(200).body("OK");
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
     }
 
-    @GetMapping("/admin")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<?> getUser() {
-        return ResponseEntity.status(200).body("OK2");
+    @GetMapping
+    @PreAuthorize("hasAnyRole('SUPERADMIN')")
+    public ResponseEntity<?> getUser(@Valid PaginationParams params) {
+        System.out.println(params);
+        Page<UserDTO> usersPage = userService.getAllUsers(params.getPage(), params.getSize(), params.getSort(), params.getKeyword());
+        PaginationResponse<UserDTO> response = PaginationAndSortUtil.map(usersPage);
+        return ResponseEntity.status(200).body(response);
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('SUPERADMIN')")
+    public ResponseEntity<?> updateUser(@RequestBody UpdateUser updateUser) {
+        UserDTO userDTO = userService.updateUser(updateUser);
+        return ResponseEntity.status(200).body(userDTO);
     }
 }

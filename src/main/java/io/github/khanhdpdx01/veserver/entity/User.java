@@ -28,13 +28,11 @@ public class User {
     private String role;
     private boolean isActive;
 
-    public static void main(String[] args) throws ParseException {
-        String date = "2016-08-16";
-
-        //default, ISO_LOCAL_DATE
-        LocalDate localDate = LocalDate.parse(date);
-
-        System.out.println(localDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
-
+    public static void main(String[] args) {
+        String name = "VBCC_Phu_luc_Nguyen_Van_A.pdf";
+        if(name.toLowerCase().indexOf("vbcc_phu_luc") != -1) {
+            System.out.println("True");
+        }
     }
+
 }

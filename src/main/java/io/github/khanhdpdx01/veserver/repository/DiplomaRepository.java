@@ -1,7 +1,6 @@
 package io.github.khanhdpdx01.veserver.repository;
 
 import io.github.khanhdpdx01.veserver.entity.Diploma;
-import io.github.khanhdpdx01.veserver.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,10 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface UserRepository extends JpaRepository<User, Integer> {
-    @Query("SELECT u from User u where u.username = :username")
-    Optional<User> findByUsername(String username);
-
-    @Query("SELECT u from User u where u.username LIKE %:keyword%")
-    Page<User> search(@Param("keyword") String keyword, Pageable pageable);
+public interface DiplomaRepository extends JpaRepository<Diploma, String> {
+    @Query("SELECT d FROM Diploma d WHERE d.serialNumber LIKE %:keyword%")
+    Page<Diploma> search(@Param("keyword") String keyword, Pageable pageable);
 }

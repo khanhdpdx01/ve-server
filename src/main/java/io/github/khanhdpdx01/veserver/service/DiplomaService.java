@@ -4,15 +4,23 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.khanhdpdx01.veserver.dto.diploma.AddDiplomaForm;
 import io.github.khanhdpdx01.veserver.dto.diploma.DiplomaDTO;
+import io.github.khanhdpdx01.veserver.dto.diploma.DiplomaDetail;
 import io.github.khanhdpdx01.veserver.dto.diploma.LookUpDiplomaDTO;
-import io.github.khanhdpdx01.veserver.dto.diploma.VDiploma;
 import io.github.khanhdpdx01.veserver.entity.*;
 import io.github.khanhdpdx01.veserver.identity.EnrollAdmin;
 import io.github.khanhdpdx01.veserver.identity.RegisterUser;
+import io.github.khanhdpdx01.veserver.repository.DiplomaRepository;
 import io.github.khanhdpdx01.veserver.repository.MajorRepository;
 import io.github.khanhdpdx01.veserver.repository.SpecialityRepository;
+import io.github.khanhdpdx01.veserver.util.IpfsUtil;
+import io.github.khanhdpdx01.veserver.util.PaginationAndSortUtil;
+import io.ipfs.api.IPFS;
 import org.hyperledger.fabric.gateway.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -29,11 +37,14 @@ public class DiplomaService {
     private final MajorRepository majorRepository;
     private final SpecialityRepository specialityRepository;
     private final SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+    private final DiplomaRepository diplomaRepository;
 //    private final Genson genson = new Genson();
 
-    public DiplomaService(MajorRepository majorRepository, SpecialityRepository specialityRepository) {
+
+    public DiplomaService(MajorRepository majorRepository, SpecialityRepository specialityRepository, DiplomaRepository diplomaRepository) {
         this.majorRepository = majorRepository;
         this.specialityRepository = specialityRepository;
+        this.diplomaRepository = diplomaRepository;
     }
 
     public static Gateway connect() throws Exception {
@@ -51,7 +62,7 @@ public class DiplomaService {
 
     public List<DiplomaDTO> getAllDiplomasFromNetwork() throws Exception {
         byte[] result;
-        List<VDiploma> vdiplomas;
+        List<Diploma> diplomas;
 
         EnrollAdmin.main(null);
         RegisterUser.main(null);
@@ -63,14 +74,30 @@ public class DiplomaService {
         System.out.println("\n");
         result = contract.evaluateTransaction("getAllDiplomas");
 
-        vdiplomas = new ObjectMapper().readValue(new String(result), new TypeReference<List<VDiploma>>() {
+        diplomas = new ObjectMapper().readValue(new String(result), new TypeReference<List<Diploma>>() {
         });
 
-        return mapList(vdiplomas);
+        return mapList(diplomas);
     }
 
-    public String createDiploma(AddDiplomaForm addDiplomaForm) {
-        byte[] result;
+    public Page<DiplomaDTO> getAllDiplomas(int page, int size, String[] sort, String keyword) {
+        Pageable pageable = PaginationAndSortUtil.create(page, size, sort);
+
+        Page<Diploma> pageRoom;
+
+        if (keyword == null || keyword.isBlank()) {
+            pageRoom = diplomaRepository.findAll(pageable);
+        } else {
+            pageRoom = diplomaRepository.search(keyword, pageable);
+        }
+
+        List<DiplomaDTO> diplomaDTOs = mapList(pageRoom.getContent());
+
+        return new PageImpl<>(diplomaDTOs, pageable, pageRoom.getTotalElements());
+    }
+
+    public Diploma createDiploma(AddDiplomaForm addDiplomaForm, List<MultipartFile> files) {
+        Diploma diploma;
 
         Speciality speciality = specialityRepository.findById(addDiplomaForm.getSpecialityId())
                 .orElseThrow(() -> new RuntimeException("Speciality is not found"));
@@ -92,9 +119,12 @@ public class DiplomaService {
 //
 //            System.out.println("Submit Transaction: InitLedger creates the initial set of assets on the ledger.");
 //			contract.submitTransaction("InitLedger");
+            IPFS ipfs = new IPFS("localhost", 5002);
 
-            System.out.println("\n");
-            result = contract.submitTransaction("createDiploma",
+            String diplomaLink = IpfsUtil.addContent(ipfs, files.get(0).getInputStream()).toString();
+            String appendixLink = IpfsUtil.addContent(ipfs, files.get(1).getInputStream()).toString();
+
+            byte[] res = contract.submitTransaction("createDiploma",
                     addDiplomaForm.getSerialNumber(),
                     addDiplomaForm.getUserId().trim(),
                     addDiplomaForm.getFirstName().trim(),
@@ -117,13 +147,18 @@ public class DiplomaService {
                     Double.toString(addDiplomaForm.getTrainingTime()),
                     formatter.format(addDiplomaForm.getDateOfEnrollment()),
                     major.getName(),
-                    "2019-2023");
-            System.out.println("Evaluate Transaction: GetAllAssets, result: " + new String(result));
+                    "2019-2023",
+                    diplomaLink,
+                    appendixLink);
+
+            diploma = new ObjectMapper().readValue(new String(res), Diploma.class);
+            diplomaRepository.save(diploma);
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-        return new String(result);
+        return diploma;
     }
 
     public List<DiplomaDTO> lookUpDiploma(LookUpDiplomaDTO lookUpDiplomaDTO) {
@@ -146,7 +181,8 @@ public class DiplomaService {
                 result = contract.evaluateTransaction("searchBySerialNumber", lookUpDiplomaDTO.getSerialNumber());
 
 //                VDiploma diploma = genson.deserialize(result, VDiploma.class);
-                VDiploma diploma = new ObjectMapper().readValue(new String(result), VDiploma.class);
+                Diploma diploma = diplomaRepository.findById(lookUpDiplomaDTO.getSerialNumber())
+                        .orElseThrow(() -> new RuntimeException("Diploma is not found"));
                 diplomaDTOs.add(map(diploma));
             } else {
                 LocalDate localDate = LocalDate.parse(lookUpDiplomaDTO.getDateOfBirth());
@@ -155,7 +191,7 @@ public class DiplomaService {
                         localDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
 
                 System.out.println(new String((result)));
-                diplomaDTOs.addAll(mapList(new ObjectMapper().readValue(new String(result), new TypeReference<List<VDiploma>>() {
+                diplomaDTOs.addAll(mapList(new ObjectMapper().readValue(new String(result), new TypeReference<List<Diploma>>() {
                 })));
             }
 
@@ -167,8 +203,8 @@ public class DiplomaService {
         return diplomaDTOs;
     }
 
-    public VDiploma getDiploma(String serialNumber) {
-        VDiploma diploma = null;
+    public DiplomaDetail getDiploma(String serialNumber) {
+        DiplomaDetail diploma = null;
 
         try {
             EnrollAdmin.main(null);
@@ -185,7 +221,8 @@ public class DiplomaService {
 
             if (serialNumber != null) {
                 result = contract.evaluateTransaction("searchBySerialNumber", serialNumber);
-                diploma = new ObjectMapper().readValue(new String(result), VDiploma.class);
+                System.out.println(new String(result));
+                diploma = new ObjectMapper().readValue(new String(result), DiplomaDetail.class);
             }
 
         } catch (Exception e) {
@@ -194,7 +231,7 @@ public class DiplomaService {
         return diploma;
     }
 
-    public DiplomaDTO map(VDiploma diploma) throws ParseException {
+    public DiplomaDTO map(Diploma diploma) throws ParseException {
         DiplomaDTO diplomaDTO = new DiplomaDTO();
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(formatter.parse(diploma.getDateOfGraduation()));
@@ -217,7 +254,7 @@ public class DiplomaService {
         return diplomaDTO;
     }
 
-    public List<DiplomaDTO> mapList(List<VDiploma> diplomas) {
+    public List<DiplomaDTO> mapList(List<Diploma> diplomas) {
         List<DiplomaDTO> diplomaDTOS = new ArrayList<>();
         diplomas.forEach(diploma -> {
             try {
@@ -227,5 +264,27 @@ public class DiplomaService {
             }
         });
         return diplomaDTOS;
+    }
+
+    public String test() {
+        try {
+            EnrollAdmin.main(null);
+            RegisterUser.main(null);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+
+        byte[] result = new byte[0];
+        try {
+            Gateway gateway = connect();
+            Network network = gateway.getNetwork("mychannel");
+            Contract contract = network.getContract("chaincode");
+
+            result = contract.evaluateTransaction("getString");
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+
+        return new String(result);
     }
 }
