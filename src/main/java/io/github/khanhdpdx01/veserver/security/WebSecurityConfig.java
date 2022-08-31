@@ -55,6 +55,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .deleteCookies("JSESSIONID").deleteCookies("access_token");
 
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+
+        http.headers().frameOptions().disable();
+//                .addHeaderWriter(new StaticHeadersWriter("X-FRAME-OPTIONS",
+//                        "ALLOW-FROM http://localhost:8080"));
     }
 
     @Bean

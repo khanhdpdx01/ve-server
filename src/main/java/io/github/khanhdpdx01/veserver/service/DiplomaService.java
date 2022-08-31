@@ -12,9 +12,8 @@ import io.github.khanhdpdx01.veserver.identity.RegisterUser;
 import io.github.khanhdpdx01.veserver.repository.DiplomaRepository;
 import io.github.khanhdpdx01.veserver.repository.MajorRepository;
 import io.github.khanhdpdx01.veserver.repository.SpecialityRepository;
-import io.github.khanhdpdx01.veserver.util.IpfsUtil;
+import io.github.khanhdpdx01.veserver.util.FileUtil;
 import io.github.khanhdpdx01.veserver.util.PaginationAndSortUtil;
-import io.ipfs.api.IPFS;
 import org.hyperledger.fabric.gateway.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -38,8 +37,7 @@ public class DiplomaService {
     private final SpecialityRepository specialityRepository;
     private final SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
     private final DiplomaRepository diplomaRepository;
-//    private final Genson genson = new Genson();
-
+    //    private final Genson genson = new Genson();
 
     public DiplomaService(MajorRepository majorRepository, SpecialityRepository specialityRepository, DiplomaRepository diplomaRepository) {
         this.majorRepository = majorRepository;
@@ -97,69 +95,110 @@ public class DiplomaService {
     }
 
     public Diploma createDiploma(AddDiplomaForm addDiplomaForm, List<MultipartFile> files) {
-        Diploma diploma;
-
         Speciality speciality = specialityRepository.findById(addDiplomaForm.getSpecialityId())
                 .orElseThrow(() -> new RuntimeException("Speciality is not found"));
 
         Major major = majorRepository.findById(addDiplomaForm.getMajorId())
                 .orElseThrow(() -> new RuntimeException("Major is not found"));
 
-        try {
-            EnrollAdmin.main(null);
-            RegisterUser.main(null);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
+        FileUtil.save(files.get(0));
+        FileUtil.save(files.get(1));
 
-        try {
-            Gateway gateway = connect();
-            Network network = gateway.getNetwork("mychannel");
-            Contract contract = network.getContract("chaincode");
-//
-//            System.out.println("Submit Transaction: InitLedger creates the initial set of assets on the ledger.");
-//			contract.submitTransaction("InitLedger");
-            IPFS ipfs = new IPFS("localhost", 5002);
+        Diploma diploma = new Diploma();
+        diploma.setSerialNumber(addDiplomaForm.getSerialNumber())
+                .setUserId(addDiplomaForm.getUserId().trim())
+                .setFirstName(addDiplomaForm.getFirstName().trim())
+                .setLastName(addDiplomaForm.getLastName().trim())
+                .setDateOfBirth(formatter.format(addDiplomaForm.getDateOfBirth()))
+                .setGender(addDiplomaForm.isGender() ? "Nam" : "Nữ")
+                .setPlaceOfBirth(addDiplomaForm.getPlaceOfBirth())
+                .setGrade(addDiplomaForm.getGrade())
+                .setLevel(Level.getAllLevels().get(addDiplomaForm.getLevelId()))
+                .setRank(Ranking.getAllRanks().get(addDiplomaForm.getRankId())).
+                setModeOfStudy(ModeOfStudy.getAllModeOfStudies().get(addDiplomaForm.getModeOfStudy()))
+                .setSpeciality(speciality.getName())
+                .setGraduation(addDiplomaForm.getGraduation())
+                .setDateOfGraduation(formatter.format(addDiplomaForm.getDateOfGraduate()))
+                .setRefNumber(addDiplomaForm.getRefNumber())
+                .setStatus(Status.PENDING.ordinal() + 1) // +1 because index of enum start from 0.
+                .setGpa(Double.toString(addDiplomaForm.getGpa()))
+                .setTotalCredits(Integer.toString(addDiplomaForm.getTotalCredits()))
+                .setTrainingLanguage(TrainingLanguage.getAllLanguages().get(addDiplomaForm.getTrainingLanguage()))
+                .setTime(Double.toString(addDiplomaForm.getTrainingTime()))
+                .setDateOfEnrollment(formatter.format(addDiplomaForm.getDateOfEnrollment()))
+                .setMajor(major.getName())
+                .setSession("2019-2023")
+                .setDiplomaLink(files.get(0).getOriginalFilename())
+                .setAppendixLink(files.get(1).getOriginalFilename());
+        Diploma createdDiploma = diplomaRepository.save(diploma);
 
-            String diplomaLink = IpfsUtil.addContent(ipfs, files.get(0).getInputStream()).toString();
-            String appendixLink = IpfsUtil.addContent(ipfs, files.get(1).getInputStream()).toString();
-
-            byte[] res = contract.submitTransaction("createDiploma",
-                    addDiplomaForm.getSerialNumber(),
-                    addDiplomaForm.getUserId().trim(),
-                    addDiplomaForm.getFirstName().trim(),
-                    addDiplomaForm.getLastName().trim(),
-                    formatter.format(addDiplomaForm.getDateOfBirth()),
-                    addDiplomaForm.isGender() ? "Nam" : "Nữ",
-                    addDiplomaForm.getPlaceOfBirth(),
-                    addDiplomaForm.getGrade(),
-                    Level.getAllLevels().get(addDiplomaForm.getLevelId()),
-                    Ranking.getAllRanks().get(addDiplomaForm.getRankId()),
-                    ModeOfStudy.getAllModeOfStudies().get(addDiplomaForm.getModeOfStudy()),
-                    speciality.getName(),
-                    addDiplomaForm.getGraduation(),
-                    formatter.format(addDiplomaForm.getDateOfGraduate()),
-                    addDiplomaForm.getRefNumber(),
-                    Status.getStatus().get(addDiplomaForm.getStatus()),
-                    Double.toString(addDiplomaForm.getGpa()),
-                    Integer.toString(addDiplomaForm.getTotalCredits()),
-                    TrainingLanguage.getAllLanguages().get(addDiplomaForm.getTrainingLanguage()),
-                    Double.toString(addDiplomaForm.getTrainingTime()),
-                    formatter.format(addDiplomaForm.getDateOfEnrollment()),
-                    major.getName(),
-                    "2019-2023",
-                    diplomaLink,
-                    appendixLink);
-
-            diploma = new ObjectMapper().readValue(new String(res), Diploma.class);
-            diplomaRepository.save(diploma);
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        return diploma;
+        return createdDiploma;
     }
+
+//    public Diploma storeDiplomaToBlockchain() {
+//        Diploma diploma;
+//
+//        Speciality speciality = specialityRepository.findById(addDiplomaForm.getSpecialityId())
+//                .orElseThrow(() -> new RuntimeException("Speciality is not found"));
+//
+//        Major major = majorRepository.findById(addDiplomaForm.getMajorId())
+//                .orElseThrow(() -> new RuntimeException("Major is not found"));
+//
+//        try {
+//            EnrollAdmin.main(null);
+//            RegisterUser.main(null);
+//        } catch (Exception e) {
+//            System.out.println(e.getMessage());
+//        }
+//
+//        try {
+//            Gateway gateway = connect();
+//            Network network = gateway.getNetwork("mychannel");
+//            Contract contract = network.getContract("chaincode");
+////
+////            System.out.println("Submit Transaction: InitLedger creates the initial set of assets on the ledger.");
+////			contract.submitTransaction("InitLedger");
+//            IPFS ipfs = new IPFS("localhost", 5002);
+//
+//            String diplomaLink = IpfsUtil.addContent(ipfs, files.get(0).getInputStream()).toString();
+//            String appendixLink = IpfsUtil.addContent(ipfs, files.get(1).getInputStream()).toString();
+//
+//            byte[] res = contract.submitTransaction("createDiploma",
+//                    addDiplomaForm.getSerialNumber(),
+//                    addDiplomaForm.getUserId().trim(),
+//                    addDiplomaForm.getFirstName().trim(),
+//                    addDiplomaForm.getLastName().trim(),
+//                    formatter.format(addDiplomaForm.getDateOfBirth()),
+//                    addDiplomaForm.isGender() ? "Nam" : "Nữ",
+//                    addDiplomaForm.getPlaceOfBirth(),
+//                    addDiplomaForm.getGrade(),
+//                    Level.getAllLevels().get(addDiplomaForm.getLevelId()),
+//                    Ranking.getAllRanks().get(addDiplomaForm.getRankId()),
+//                    ModeOfStudy.getAllModeOfStudies().get(addDiplomaForm.getModeOfStudy()),
+//                    speciality.getName(),
+//                    addDiplomaForm.getGraduation(),
+//                    formatter.format(addDiplomaForm.getDateOfGraduate()),
+//                    addDiplomaForm.getRefNumber(),
+//                    Status.getStatus().get(addDiplomaForm.getStatus()),
+//                    Double.toString(addDiplomaForm.getGpa()),
+//                    Integer.toString(addDiplomaForm.getTotalCredits()),
+//                    TrainingLanguage.getAllLanguages().get(addDiplomaForm.getTrainingLanguage()),
+//                    Double.toString(addDiplomaForm.getTrainingTime()),
+//                    formatter.format(addDiplomaForm.getDateOfEnrollment()),
+//                    major.getName(),
+//                    "2019-2023",
+//                    diplomaLink,
+//                    appendixLink);
+//
+//            diploma = new ObjectMapper().readValue(new String(res), Diploma.class);
+//            diplomaRepository.save(diploma);
+//
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
+//
+//        return diploma;
+//    }
 
     public List<DiplomaDTO> lookUpDiploma(LookUpDiplomaDTO lookUpDiplomaDTO) {
         List<DiplomaDTO> diplomaDTOs = new ArrayList<>();
@@ -231,6 +270,8 @@ public class DiplomaService {
         return diploma;
     }
 
+
+
     public DiplomaDTO map(Diploma diploma) throws ParseException {
         DiplomaDTO diplomaDTO = new DiplomaDTO();
         Calendar calendar = Calendar.getInstance();
@@ -247,7 +288,7 @@ public class DiplomaService {
                 .setSpeciality(diploma.getSpeciality())
                 .setYearOfGraduation("" + calendar.get(Calendar.YEAR))
                 .setSerialNumber(diploma.getSerialNumber())
-                .setStatus(diploma.getStatus())
+                .setStatus(Status.getStatus().get(diploma.getStatus()))
                 .setRefNumber(diploma.getRefNumber())
                 .setGraduation(diploma.getGraduation());
 
@@ -263,6 +304,7 @@ public class DiplomaService {
                 throw new RuntimeException(e);
             }
         });
+
         return diplomaDTOS;
     }
 
@@ -286,5 +328,15 @@ public class DiplomaService {
         }
 
         return new String(result);
+    }
+
+    public Page<DiplomaDTO> getAllDiplomasHasPendingStatus(int page, int size, String[] sort, String keyword) {
+        Pageable pageable = PaginationAndSortUtil.create(page, size, sort);
+
+        Page<Diploma> pageRoom = diplomaRepository.getAllDiplomasHasPendingStatus(Status.PENDING.ordinal() + 1, pageable);
+
+        List<DiplomaDTO> diplomaDTOs = mapList(pageRoom.getContent());
+
+        return new PageImpl<>(diplomaDTOs, pageable, pageRoom.getTotalElements());
     }
 }

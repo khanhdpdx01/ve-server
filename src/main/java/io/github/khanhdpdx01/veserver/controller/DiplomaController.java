@@ -11,11 +11,11 @@ import io.github.khanhdpdx01.veserver.entity.*;
 import io.github.khanhdpdx01.veserver.repository.MajorRepository;
 import io.github.khanhdpdx01.veserver.repository.SpecialityRepository;
 import io.github.khanhdpdx01.veserver.service.DiplomaService;
-import io.github.khanhdpdx01.veserver.util.IpfsUtil;
+import io.github.khanhdpdx01.veserver.util.FileUtil;
 import io.github.khanhdpdx01.veserver.util.PaginationAndSortUtil;
-import io.ipfs.api.IPFS;
-import io.ipfs.multihash.Multihash;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -63,17 +63,16 @@ public class DiplomaController {
     }
 
     @PostMapping(value = "/test", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMIN')")
+//    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<?> createDiploma(@RequestPart("file") MultipartFile file) {
-        Multihash multihash;
+        String res;
         try {
             InputStream inputStream = file.getInputStream();
-            IPFS ipfs = new IPFS("localhost", 5002);
-            multihash = IpfsUtil.addContent(ipfs, inputStream);
+            FileUtil.save(file);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return ResponseEntity.status(200).body(multihash.toString());
+        return ResponseEntity.status(200).body(file.getOriginalFilename());
     }
 
     @GetMapping("/all")
@@ -81,7 +80,7 @@ public class DiplomaController {
     public ResponseEntity<?> getAllDiplomas(@Valid PaginationParams params) {
         Page<DiplomaDTO> pageDiplomaDTO = diplomaService.getAllDiplomas(params.getPage(),
                 params.getSize(), params.getSort(), params.getKeyword());
-        System.out.println(params);
+
         PaginationResponse<DiplomaDTO> response = PaginationAndSortUtil.map(pageDiplomaDTO);
         return ResponseEntity.status(200).body(response);
     }
@@ -102,5 +101,23 @@ public class DiplomaController {
     public ResponseEntity<?> lookUp(LookUpDiplomaDTO params) {
         List<DiplomaDTO> diplomas = diplomaService.lookUpDiploma(params);
         return ResponseEntity.status(200).body(diplomas);
+    }
+
+    @GetMapping(value = "/files/{filename:.+}")
+    public ResponseEntity<Resource> getFile(@PathVariable String filename) {
+        Resource file = FileUtil.load(filename);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
+                .contentType(MediaType.APPLICATION_PDF).body(file);
+    }
+
+    @GetMapping("/pending-status")
+    @PreAuthorize("hasAnyRole('PRINCIPAL')")
+    public ResponseEntity<?> getAllDiplomasHasPendingStatus(@Valid PaginationParams params) {
+        Page<DiplomaDTO> pageDiplomaDTO = diplomaService.getAllDiplomasHasPendingStatus(params.getPage(),
+                params.getSize(), params.getSort(), params.getKeyword());
+
+        PaginationResponse<DiplomaDTO> response = PaginationAndSortUtil.map(pageDiplomaDTO);
+        return ResponseEntity.status(200).body(response);
     }
 }

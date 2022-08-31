@@ -53,7 +53,7 @@ public class AddDiplomaForm implements Serializable {
     @NotNull
     private Date dateOfGraduate;
 
-    private int status;
+//    private int status;
 
     private int majorId;
 

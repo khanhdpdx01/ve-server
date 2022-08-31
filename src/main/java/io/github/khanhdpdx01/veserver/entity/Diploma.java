@@ -31,7 +31,7 @@ public class Diploma {
     private String graduation;
     private String dateOfGraduation;
     private String refNumber;
-    private String status;
+    private int status;
     private String gpa;
     private String totalCredits;
     private String trainingLanguage;
