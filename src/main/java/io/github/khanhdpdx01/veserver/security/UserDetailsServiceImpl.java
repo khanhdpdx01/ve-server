@@ -1,5 +1,6 @@
 package io.github.khanhdpdx01.veserver.security;
 
+import io.github.khanhdpdx01.veserver.dto.user.UserPrinciple;
 import io.github.khanhdpdx01.veserver.entity.User;
 import io.github.khanhdpdx01.veserver.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         grandList.add(new SimpleGrantedAuthority(user.getRole()));
 
-        return new org.springframework.security.core.userdetails.User(user.getUsername(),
+        UserPrinciple userPrinciple = new UserPrinciple(user.getUsername(),
                 user.getPassword(), grandList);
+        userPrinciple.setUserId(user.getUserId());
+        userPrinciple.setRole(user.getRole());
+
+        return userPrinciple;
     }
 }

@@ -42,4 +42,6 @@ public class Diploma {
     private String session;
     private String diplomaLink;
     private String appendixLink;
+    private String hash;
+    private String transactionId;
 }

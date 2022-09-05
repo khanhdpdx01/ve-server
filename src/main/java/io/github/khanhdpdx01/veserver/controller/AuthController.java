@@ -1,7 +1,9 @@
 package io.github.khanhdpdx01.veserver.controller;
 
 import io.github.khanhdpdx01.veserver.dto.user.CreateUserDTO;
+import io.github.khanhdpdx01.veserver.dto.user.UserPrinciple;
 import io.github.khanhdpdx01.veserver.security.JwtRequest;
+import io.github.khanhdpdx01.veserver.security.JwtResponse;
 import io.github.khanhdpdx01.veserver.security.JwtTokenUtil;
 import io.github.khanhdpdx01.veserver.service.UserService;
 import io.github.khanhdpdx01.veserver.util.CookieFactory;
@@ -10,7 +12,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,7 +45,7 @@ public class AuthController {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        User userDetails = (User) authentication.getPrincipal();
+        UserPrinciple userDetails = (UserPrinciple) authentication.getPrincipal();
         System.out.println(userDetails.getAuthorities());
         final String accessToken = jwtTokenUtil.generateToken(userDetails);
 
@@ -52,7 +53,11 @@ public class AuthController {
 
         response.addCookie(accessTokenCookie);
 
-        return ResponseEntity.status(200).body(accessToken);
+        JwtResponse jwtResponse = new JwtResponse();
+        jwtResponse.setRole(userDetails.getRole());
+        jwtResponse.setAccessToken(accessToken);
+
+        return ResponseEntity.status(200).body(jwtResponse);
     }
 
     @PostMapping("/register")

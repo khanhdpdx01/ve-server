@@ -1,9 +1,6 @@
 package io.github.khanhdpdx01.veserver.controller;
 
-import io.github.khanhdpdx01.veserver.dto.diploma.AddDiplomaForm;
-import io.github.khanhdpdx01.veserver.dto.diploma.DiplomaDTO;
-import io.github.khanhdpdx01.veserver.dto.diploma.DiplomaDetail;
-import io.github.khanhdpdx01.veserver.dto.diploma.LookUpDiplomaDTO;
+import io.github.khanhdpdx01.veserver.dto.diploma.*;
 import io.github.khanhdpdx01.veserver.dto.pagination.PaginationParams;
 import io.github.khanhdpdx01.veserver.dto.pagination.PaginationResponse;
 import io.github.khanhdpdx01.veserver.dto.training_program.ChoiceTrainningProgramFeild;
@@ -59,6 +56,13 @@ public class DiplomaController {
     public ResponseEntity<?> createDiploma(@RequestPart("diploma") AddDiplomaForm addDiplomaForm,
                                            @RequestPart("files") List<MultipartFile> files) {
         Diploma res = diplomaService.createDiploma(addDiplomaForm, files);
+        return ResponseEntity.status(200).body(res);
+    }
+
+    @PostMapping("/sign")
+    @PreAuthorize("hasAnyRole('PRINCIPAL')")
+    public ResponseEntity<?> signDiploma(@RequestBody SignDiplomaDTO signDiplomaDTO) {
+        Diploma res = diplomaService.storeDiplomaToBlockchain(signDiplomaDTO.getSerialNumber());
         return ResponseEntity.status(200).body(res);
     }
 

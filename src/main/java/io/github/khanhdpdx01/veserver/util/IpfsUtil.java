@@ -3,17 +3,15 @@ package io.github.khanhdpdx01.veserver.util;
 import io.ipfs.api.IPFS;
 import io.ipfs.api.MerkleNode;
 import io.ipfs.api.NamedStreamable;
-import io.ipfs.cid.Cid;
 import io.ipfs.multihash.Multihash;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 public class IpfsUtil {
-    public static Multihash addContent(IPFS ipfs, InputStream inputStream) {
+    public static Multihash addContent(IPFS ipfs, byte[] data) {
         Multihash CID;
         try {
-            NamedStreamable.InputStreamWrapper is = new NamedStreamable.InputStreamWrapper(inputStream);
+            NamedStreamable.ByteArrayWrapper is = new NamedStreamable.ByteArrayWrapper(data);
             MerkleNode response = ipfs.add(is).get(0);
             ipfs.refs.local();
             CID = response.hash;
