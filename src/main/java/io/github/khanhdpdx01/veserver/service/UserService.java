@@ -68,7 +68,6 @@ public class UserService {
         return userDTO;
     }
 
-
     public List<UserDTO> mapList(List<User> users) {
         List<UserDTO> userDTOs = new ArrayList<>();
         users.forEach(user -> userDTOs.add(map(user)));

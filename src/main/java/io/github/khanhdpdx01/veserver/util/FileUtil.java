@@ -17,7 +17,6 @@ public class FileUtil {
     public static void save(MultipartFile file) {
         try {
             Files.write(savePath.resolve(file.getOriginalFilename()), file.getBytes());
-
         } catch (IOException e) {
             throw new RuntimeException(e.getMessage());
         }

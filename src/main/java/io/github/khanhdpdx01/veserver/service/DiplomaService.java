@@ -58,7 +58,7 @@ public class DiplomaService {
 
         Gateway.Builder builder = Gateway.createBuilder();
 
-        builder.identity(wallet, "userB").networkConfig(networkConfigPath).discovery(true);
+        builder.identity(wallet, "appUser").networkConfig(networkConfigPath).discovery(true);
         return builder.connect();
     }
 
