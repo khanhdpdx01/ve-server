@@ -6,7 +6,7 @@ public class CookieFactory {
     public static Cookie create(String name, String value) {
         Cookie cookie = new Cookie(name, value);
         cookie.setMaxAge(60 * 60 * 24 * 365);
-        cookie.setHttpOnly(true);
+        cookie.setHttpOnly(false);
         cookie.setPath("/");
         cookie.setSecure(false);
         return cookie;
