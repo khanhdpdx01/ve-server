@@ -5,7 +5,6 @@ WORKDIR /app
 ENV LANG C.UTF-8
 ARG JAR_FILE=target/*.jar
 COPY ${JAR_FILE} app.jar
-COPY wallet .
 #CMD ["java", "-jar", "shorten-url.jar"]
 
 FROM gcr.io/distroless/java11-debian11

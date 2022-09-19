@@ -4,17 +4,15 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
+import java.io.Serializable;
 
 @Getter
 @Setter
 @Entity
 @Accessors(chain = true)
 @Table
-public class Diploma {
+public class Diploma implements Serializable {
     @Id
     private String serialNumber;
     private String firstName;
@@ -42,6 +40,6 @@ public class Diploma {
     private String session;
     private String diplomaLink;
     private String appendixLink;
-    private String hash;
+    @Transient
     private String transactionId;
 }

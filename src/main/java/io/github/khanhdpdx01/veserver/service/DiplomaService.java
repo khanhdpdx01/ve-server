@@ -7,21 +7,19 @@ import io.github.khanhdpdx01.veserver.dto.diploma.DiplomaDTO;
 import io.github.khanhdpdx01.veserver.dto.diploma.DiplomaDetail;
 import io.github.khanhdpdx01.veserver.dto.diploma.LookUpDiplomaDTO;
 import io.github.khanhdpdx01.veserver.entity.*;
-import io.github.khanhdpdx01.veserver.identity.EnrollAdmin;
-import io.github.khanhdpdx01.veserver.identity.RegisterUser;
 import io.github.khanhdpdx01.veserver.repository.DiplomaRepository;
 import io.github.khanhdpdx01.veserver.repository.MajorRepository;
 import io.github.khanhdpdx01.veserver.repository.SpecialityRepository;
 import io.github.khanhdpdx01.veserver.util.CryptoUtil;
 import io.github.khanhdpdx01.veserver.util.FileUtil;
-import io.github.khanhdpdx01.veserver.util.IpfsUtil;
 import io.github.khanhdpdx01.veserver.util.PaginationAndSortUtil;
-import io.ipfs.api.IPFS;
 import org.hyperledger.fabric.gateway.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.SerializationUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
@@ -41,6 +39,15 @@ public class DiplomaService {
     private final SpecialityRepository specialityRepository;
     private final SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
     private final DiplomaRepository diplomaRepository;
+    @Value("${ipfs.host}")
+    private String ipfsHost;
+    @Value("${ipfs.port}")
+    private int ipfsPort;
+    @Value("${fabric.channel-name}")
+    private String channel;
+    @Value("${fabric.chaincode-name}")
+    private String chaincode;
+
     //    private final Genson genson = new Genson();
 
     public DiplomaService(MajorRepository majorRepository, SpecialityRepository specialityRepository, DiplomaRepository diplomaRepository) {
@@ -55,10 +62,10 @@ public class DiplomaService {
         Wallet wallet = Wallets.newFileSystemWallet(walletPath);
         // load a CCP
         Path networkConfigPath = Paths.get("/home/khanh/VTS/vecert-network/organizations/peerOrganizations/issuer.com/connection-org1.yaml");
-
+//        Path networkConfigPath = walletPath.resolve("connection.json");
         Gateway.Builder builder = Gateway.createBuilder();
 
-        builder.identity(wallet, "appUser").networkConfig(networkConfigPath).discovery(true);
+        builder.identity(wallet, "admin").networkConfig(networkConfigPath).discovery(true);
         return builder.connect();
     }
 
@@ -66,16 +73,12 @@ public class DiplomaService {
         byte[] result;
         List<Diploma> diplomas;
 
-        EnrollAdmin.main(null);
-        RegisterUser.main(null);
-
         Gateway gateway = connect();
-        Network network = gateway.getNetwork("mychannel");
-        Contract contract = network.getContract("chaincode");
+        Network network = gateway.getNetwork(channel);
+        Contract contract = network.getContract(chaincode);
 
         System.out.println("\n");
-        result = contract.evaluateTransaction("getAllDiplomas");
-
+        result = contract.evaluateTransaction("GetAllDiplomas");
         diplomas = new ObjectMapper().readValue(new String(result), new TypeReference<List<Diploma>>() {
         });
 
@@ -144,25 +147,19 @@ public class DiplomaService {
                 .orElseThrow(() -> new RuntimeException("Diploma is not found"));
 
         try {
-            EnrollAdmin.main(null);
-            RegisterUser.main(null);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
-
-        try {
             Gateway gateway = connect();
-            Network network = gateway.getNetwork("mychannel");
-            Contract contract = network.getContract("chaincode");
+            Network network = gateway.getNetwork(channel);
+            Contract contract = network.getContract(chaincode);
+
+//            IPFS ipfs = new IPFS(ipfsHost, ipfsPort);
 //
-//            System.out.println("Submit Transaction: InitLedger creates the initial set of assets on the ledger.");
-//			contract.submitTransaction("InitLedger");
-            IPFS ipfs = new IPFS("localhost", 5002);
+//            String diplomaLink = IpfsUtil.addContent(ipfs, FileUtil.loading(diploma.getDiplomaLink())).toString();
+//            String appendixLink = IpfsUtil.addContent(ipfs, FileUtil.loading(diploma.getAppendixLink())).toString();
 
-            String diplomaLink = IpfsUtil.addContent(ipfs, FileUtil.loading(diploma.getDiplomaLink())).toString();
-            String appendixLink = IpfsUtil.addContent(ipfs, FileUtil.loading(diploma.getAppendixLink())).toString();
+            String diplomaLink = diploma.getDiplomaLink();
+            String appendixLink = diploma.getDiplomaLink();
 
-            byte[] res = contract.submitTransaction("createDiploma",
+            byte[] res = contract.submitTransaction("CreateDiploma",
                     diploma.getSerialNumber(),
                     diploma.getUserId().trim(),
                     diploma.getFirstName().trim(),
@@ -190,8 +187,6 @@ public class DiplomaService {
                     appendixLink);
 
             diploma = new ObjectMapper().readValue(new String(res), Diploma.class);
-            String hash = CryptoUtil.sha256(res);
-            diploma.setHash(hash);
             diplomaRepository.save(diploma);
 
         } catch (Exception e) {
@@ -204,21 +199,14 @@ public class DiplomaService {
     public List<DiplomaDTO> lookUpDiploma(LookUpDiplomaDTO lookUpDiplomaDTO) {
         List<DiplomaDTO> diplomaDTOs = new ArrayList<>();
 
-        try {
-            EnrollAdmin.main(null);
-            RegisterUser.main(null);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
-
         byte[] result = new byte[0];
         try {
             Gateway gateway = connect();
-            Network network = gateway.getNetwork("mychannel");
-            Contract contract = network.getContract("chaincode");
+            Network network = gateway.getNetwork(channel);
+            Contract contract = network.getContract(chaincode);
 
             if (lookUpDiplomaDTO.getSerialNumber() != null && !lookUpDiplomaDTO.getSerialNumber().isEmpty()) {
-                result = contract.evaluateTransaction("searchBySerialNumber", lookUpDiplomaDTO.getSerialNumber());
+                result = contract.evaluateTransaction("SearchBySerialNumber", lookUpDiplomaDTO.getSerialNumber());
 
 //                VDiploma diploma = genson.deserialize(result, VDiploma.class);
                 Diploma diploma = diplomaRepository.findById(lookUpDiplomaDTO.getSerialNumber())
@@ -226,7 +214,7 @@ public class DiplomaService {
                 diplomaDTOs.add(map(diploma));
             } else {
                 LocalDate localDate = LocalDate.parse(lookUpDiplomaDTO.getDateOfBirth());
-                result = contract.evaluateTransaction("searchByPersonalInfo", lookUpDiplomaDTO.getFirstName(),
+                result = contract.evaluateTransaction("SearchByPersonalInfo", lookUpDiplomaDTO.getFirstName(),
                         lookUpDiplomaDTO.getLastName(),
                         localDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
 
@@ -251,21 +239,14 @@ public class DiplomaService {
                 .orElseThrow(() -> new RuntimeException("Diploma is not found"));
 
         if (diploma.getStatus() == Status.RECEIVED.ordinal() + 1) {
-            try {
-                EnrollAdmin.main(null);
-                RegisterUser.main(null);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-
             byte[] result = new byte[0];
             try {
                 Gateway gateway = connect();
-                Network network = gateway.getNetwork("mychannel");
-                Contract contract = network.getContract("chaincode");
+                Network network = gateway.getNetwork(channel);
+                Contract contract = network.getContract(chaincode);
 
                 if (serialNumber != null) {
-                    result = contract.evaluateTransaction("searchBySerialNumber", serialNumber);
+                    result = contract.evaluateTransaction("SearchBySerialNumber", serialNumber);
                     System.out.println(new String(result));
                     diplomaDetail = new ObjectMapper().readValue(new String(result), DiplomaDetail.class);
                 }
@@ -280,7 +261,6 @@ public class DiplomaService {
 
         return diplomaDetail;
     }
-
 
     public DiplomaDTO map(Diploma diploma) throws ParseException {
         DiplomaDTO diplomaDTO = new DiplomaDTO();
@@ -319,20 +299,13 @@ public class DiplomaService {
     }
 
     public String test() {
-        try {
-            EnrollAdmin.main(null);
-            RegisterUser.main(null);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
-
         byte[] result = new byte[0];
         try {
             Gateway gateway = connect();
-            Network network = gateway.getNetwork("mychannel");
-            Contract contract = network.getContract("chaincode");
+            Network network = gateway.getNetwork(channel);
+            Contract contract = network.getContract(chaincode);
 
-            result = contract.evaluateTransaction("getString");
+            result = contract.evaluateTransaction("Test");
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -348,5 +321,39 @@ public class DiplomaService {
         List<DiplomaDTO> diplomaDTOs = mapList(pageRoom.getContent());
 
         return new PageImpl<>(diplomaDTOs, pageable, pageRoom.getTotalElements());
+    }
+
+    public boolean verifyDiploma(String serialNumber) {
+        Diploma blcDiploma = null;
+
+        Diploma diploma = diplomaRepository.findById(serialNumber)
+                .orElseThrow(() -> new RuntimeException("Diploma is not found"));
+
+        if (diploma.getStatus() == Status.RECEIVED.ordinal() + 1) {
+            byte[] result = new byte[0];
+            try {
+                Gateway gateway = connect();
+                Network network = gateway.getNetwork(channel);
+                Contract contract = network.getContract(chaincode);
+
+                if (serialNumber != null) {
+                    result = contract.evaluateTransaction("SearchBySerialNumber", serialNumber);
+                    System.out.println(new String(result));
+                    DiplomaDetail diplomaDetail = new ObjectMapper().readValue(new String(result), DiplomaDetail.class);
+                    blcDiploma = diplomaDetail.getDiploma();
+                }
+
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+
+        System.out.println(diploma);
+        System.out.println(blcDiploma);
+
+        String hash = CryptoUtil.sha256(SerializationUtils.serialize(diploma));
+        String blcHash = CryptoUtil.sha256(SerializationUtils.serialize(blcDiploma));
+
+        return hash.equals(blcHash);
     }
 }

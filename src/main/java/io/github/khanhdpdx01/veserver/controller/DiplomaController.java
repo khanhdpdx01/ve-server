@@ -101,8 +101,15 @@ public class DiplomaController {
         return ResponseEntity.status(200).body(diplomas);
     }
 
+    @GetMapping("/test")
+    public ResponseEntity<?> test() throws Exception {
+        String diplomas = diplomaService.test();
+        return ResponseEntity.status(200).body(diplomas);
+    }
+
     @GetMapping("/search")
     public ResponseEntity<?> lookUp(LookUpDiplomaDTO params) {
+        System.out.println(params);
         List<DiplomaDTO> diplomas = diplomaService.lookUpDiploma(params);
         return ResponseEntity.status(200).body(diplomas);
     }
@@ -123,5 +130,12 @@ public class DiplomaController {
 
         PaginationResponse<DiplomaDTO> response = PaginationAndSortUtil.map(pageDiplomaDTO);
         return ResponseEntity.status(200).body(response);
+    }
+
+    @GetMapping("/verify/{serial-number}")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPERADMIN')")
+    public ResponseEntity<?> verityDiploma(@PathVariable("serial-number") String serialNumber) {
+        boolean res = diplomaService.verifyDiploma(serialNumber);
+        return ResponseEntity.status(200).body(res);
     }
 }

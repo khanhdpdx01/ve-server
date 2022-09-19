@@ -18,7 +18,6 @@ import java.util.Properties;
 import java.util.Set;
 
 public class RegisterUser {
-
 	public static void main(String[] args) throws Exception {
 		// Create a CA client for interacting with the CA.
 		Properties props = new Properties();
