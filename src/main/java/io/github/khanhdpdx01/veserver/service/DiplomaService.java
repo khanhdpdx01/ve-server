@@ -31,10 +31,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 @Service
 public class DiplomaService {
+    private static String pemFileLocation;
     private final MajorRepository majorRepository;
     private final SpecialityRepository specialityRepository;
     private final SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
@@ -49,19 +51,19 @@ public class DiplomaService {
     private String chaincode;
 
     //    private final Genson genson = new Genson();
-
     public DiplomaService(MajorRepository majorRepository, SpecialityRepository specialityRepository, DiplomaRepository diplomaRepository) {
         this.majorRepository = majorRepository;
         this.specialityRepository = specialityRepository;
         this.diplomaRepository = diplomaRepository;
     }
 
-    public static Gateway connect() throws Exception {
+    public static Gateway connect(String connectionProfile) throws Exception {
         // Load a file system based wallet for managing identities.
         Path walletPath = Paths.get("wallet");
         Wallet wallet = Wallets.newFileSystemWallet(walletPath);
         // load a CCP
-        Path networkConfigPath = Paths.get("/home/khanh/VTS/vecert-network/organizations/peerOrganizations/issuer.com/connection-org1.yaml");
+        System.out.println(connectionProfile);
+        Path networkConfigPath = Paths.get(connectionProfile);
 //        Path networkConfigPath = walletPath.resolve("connection.json");
         Gateway.Builder builder = Gateway.createBuilder();
 
@@ -69,11 +71,16 @@ public class DiplomaService {
         return builder.connect();
     }
 
+    @Value("${fabric.pem-file.location}")
+    public void setPemFileLocation(String pemFileLocationArg) {
+        pemFileLocation = pemFileLocationArg;
+    }
+
     public List<DiplomaDTO> getAllDiplomasFromNetwork() throws Exception {
         byte[] result;
         List<Diploma> diplomas;
 
-        Gateway gateway = connect();
+        Gateway gateway = connect(pemFileLocation);
         Network network = gateway.getNetwork(channel);
         Contract contract = network.getContract(chaincode);
 
@@ -147,7 +154,7 @@ public class DiplomaService {
                 .orElseThrow(() -> new RuntimeException("Diploma is not found"));
 
         try {
-            Gateway gateway = connect();
+            Gateway gateway = connect(DiplomaService.pemFileLocation);
             Network network = gateway.getNetwork(channel);
             Contract contract = network.getContract(chaincode);
 
@@ -201,7 +208,7 @@ public class DiplomaService {
 
         byte[] result = new byte[0];
         try {
-            Gateway gateway = connect();
+            Gateway gateway = connect(DiplomaService.pemFileLocation);
             Network network = gateway.getNetwork(channel);
             Contract contract = network.getContract(chaincode);
 
@@ -241,7 +248,7 @@ public class DiplomaService {
         if (diploma.getStatus() == Status.RECEIVED.ordinal() + 1) {
             byte[] result = new byte[0];
             try {
-                Gateway gateway = connect();
+                Gateway gateway = connect(DiplomaService.pemFileLocation);
                 Network network = gateway.getNetwork(channel);
                 Contract contract = network.getContract(chaincode);
 
@@ -301,7 +308,7 @@ public class DiplomaService {
     public String test() {
         byte[] result = new byte[0];
         try {
-            Gateway gateway = connect();
+            Gateway gateway = connect(DiplomaService.pemFileLocation);
             Network network = gateway.getNetwork(channel);
             Contract contract = network.getContract(chaincode);
 
@@ -332,7 +339,7 @@ public class DiplomaService {
         if (diploma.getStatus() == Status.RECEIVED.ordinal() + 1) {
             byte[] result = new byte[0];
             try {
-                Gateway gateway = connect();
+                Gateway gateway = connect(DiplomaService.pemFileLocation);
                 Network network = gateway.getNetwork(channel);
                 Contract contract = network.getContract(chaincode);
 

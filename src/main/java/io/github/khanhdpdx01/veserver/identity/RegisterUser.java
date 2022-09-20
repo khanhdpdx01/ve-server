@@ -11,6 +11,7 @@ import org.hyperledger.fabric.sdk.security.CryptoSuite;
 import org.hyperledger.fabric.sdk.security.CryptoSuiteFactory;
 import org.hyperledger.fabric_ca.sdk.HFCAClient;
 import org.hyperledger.fabric_ca.sdk.RegistrationRequest;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.nio.file.Paths;
 import java.security.PrivateKey;
