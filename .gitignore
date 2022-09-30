@@ -34,3 +34,4 @@ build/
 image/
 wallet/
 .mvn/
+docker-compose.yaml

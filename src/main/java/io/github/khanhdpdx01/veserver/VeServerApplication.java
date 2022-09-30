@@ -13,7 +13,7 @@ import java.util.Properties;
 @SpringBootApplication
 public class VeServerApplication {
     static {
-        System.setProperty("org.hyperledger.fabric.sdk.service_discovery.as_localhost", "true");
+        System.setProperty("org.hyperledger.fabric.sdk.service_discovery.as_localhost", "false");
 
         try {
             Properties configuration = new Properties();
@@ -24,8 +24,8 @@ public class VeServerApplication {
             inputStream.close();
             String property = configuration.getProperty("fabric.pem-file.location");
 
-            EnrollAdmin.main(null);
-            RegisterUser.main(null);
+//            EnrollAdmin.main(null);
+//            RegisterUser.main(null);
             DiplomaService.connect(property);
         } catch (Exception e) {
             throw new RuntimeException(e);
