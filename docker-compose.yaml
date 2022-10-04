@@ -7,11 +7,10 @@ networks:
 
 services:
   be:  
-#    image: khanhdpdx01/vecert-be
-#    container_name: vecert-be
+    image: khanhdpdx01/vecert-be:1.0
     restart: always                    
-    build:
-       context: ../ve-be
+#    build:
+#       context: ../ve-be
     environment:
       - SERVER_HOST=http://localhost:8080
       - DATABASE_HOST=localhost
@@ -35,11 +34,10 @@ services:
       - backend
 
   fe:                         
-#    image: khanhdpdx01/vecert-fe
-#    container_name: vecert-fe
+    image: khanhdpdx01/vecert-fe:1.0
     restart: always                  
-    build:
-       context: ../vecert-fe
+#    build:
+#       context: ../vecert-fe
     ports:
       - "8080:80"                     
     networks:
