@@ -7,7 +7,7 @@ networks:
 
 services:
   be:  
-    image: khanhdpdx01/vecert-be:1.0
+    image: khanhdpdx01/vecert-be:1.1
     restart: always                    
 #    build:
 #       context: ../ve-be
