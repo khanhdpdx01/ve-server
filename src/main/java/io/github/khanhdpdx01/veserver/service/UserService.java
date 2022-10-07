@@ -6,6 +6,7 @@ import io.github.khanhdpdx01.veserver.dto.user.UserDTO;
 import io.github.khanhdpdx01.veserver.entity.User;
 import io.github.khanhdpdx01.veserver.repository.UserRepository;
 import io.github.khanhdpdx01.veserver.util.PaginationAndSortUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -45,7 +46,7 @@ public class UserService {
 
         Page<User> pageRoom;
 
-        if (keyword == null || keyword.isBlank()) {
+        if (keyword == null || StringUtils.isBlank(keyword)) {
             pageRoom = userRepository.findAll(pageable);
         } else {
             pageRoom = userRepository.search(keyword, pageable);

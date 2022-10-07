@@ -13,6 +13,7 @@ import io.github.khanhdpdx01.veserver.repository.SpecialityRepository;
 import io.github.khanhdpdx01.veserver.util.CryptoUtil;
 import io.github.khanhdpdx01.veserver.util.FileUtil;
 import io.github.khanhdpdx01.veserver.util.PaginationAndSortUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.hyperledger.fabric.gateway.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -97,7 +98,7 @@ public class DiplomaService {
 
         Page<Diploma> pageRoom;
 
-        if (keyword == null || keyword.isBlank()) {
+        if (keyword == null || StringUtils.isBlank(keyword)) {
             pageRoom = diplomaRepository.findAll(pageable);
         } else {
             pageRoom = diplomaRepository.search(keyword, pageable);
