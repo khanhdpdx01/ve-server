@@ -10,5 +10,4 @@ public class CreateUserDTO {
     private String phoneNumber;
     private String username;
     private String password;
-    private String confirmPassword;
 }

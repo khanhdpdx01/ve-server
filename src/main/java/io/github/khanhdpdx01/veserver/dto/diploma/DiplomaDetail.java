@@ -11,6 +11,6 @@ import lombok.ToString;
 @ToString
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DiplomaDetail {
-    private Diploma diploma;
-    private String tx;
+    private String key;
+    private Diploma record;
 }

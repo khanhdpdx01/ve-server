@@ -32,6 +32,7 @@ build/
 ### VS Code ###
 .vscode/
 image/
-wallet/
+src/main/resources/wallet/
 .mvn/
 docker-compose.yaml
+wallet/

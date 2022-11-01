@@ -50,11 +50,9 @@ public class DiplomaController {
         return feild;
     }
 
-    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE,
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('ADMIN','SUPERADMIN')")
-    public ResponseEntity<?> createDiploma(@RequestPart("diploma") AddDiplomaForm addDiplomaForm,
-                                           @RequestPart("files") List<MultipartFile> files) {
+    public ResponseEntity<?> createDiploma(@RequestPart("diploma") AddDiplomaForm addDiplomaForm, @RequestPart("files") List<MultipartFile> files) {
         Diploma res = diplomaService.createDiploma(addDiplomaForm, files);
         return ResponseEntity.status(200).body(res);
     }
@@ -81,9 +79,8 @@ public class DiplomaController {
 
     @GetMapping("/all")
     @PreAuthorize("hasAnyRole('ADMIN','SUPERADMIN')")
-    public ResponseEntity<?> getAllDiplomas(@Valid PaginationParams params) {
-        Page<DiplomaDTO> pageDiplomaDTO = diplomaService.getAllDiplomas(params.getPage(),
-                params.getSize(), params.getSort(), params.getKeyword());
+    public ResponseEntity<?> getAllDiplomas(@Valid PaginationParams params, @RequestParam(required = false) Integer majorId, @RequestParam(required = false) Integer specialityId, @RequestParam(required = false) Integer levelId, @RequestParam(required = false) Integer rankId, @RequestParam(required = false) Integer modeOfStudyId, @RequestParam(required = false) Integer statusId) {
+        Page<DiplomaDTO> pageDiplomaDTO = diplomaService.getAllDiplomas(params.getPage(), params.getSize(), params.getSort(), params.getKeyword(), majorId, specialityId, levelId, rankId, modeOfStudyId, statusId);
 
         PaginationResponse<DiplomaDTO> response = PaginationAndSortUtil.map(pageDiplomaDTO);
         return ResponseEntity.status(200).body(response);
@@ -91,25 +88,18 @@ public class DiplomaController {
 
     @GetMapping("/{serial-number}")
     public ResponseEntity<?> getDiploma(@PathVariable("serial-number") String serialNumber) {
-        DiplomaDetail diploma = diplomaService.getDiploma(serialNumber);
+        Diploma diploma = diplomaService.getDiploma(serialNumber);
         return ResponseEntity.status(200).body(diploma);
     }
 
     @GetMapping
     public ResponseEntity<?> getAllDiplomaFromNetwork() throws Exception {
-        List<DiplomaDTO> diplomas = diplomaService.getAllDiplomasFromNetwork();
-        return ResponseEntity.status(200).body(diplomas);
-    }
-
-    @GetMapping("/test")
-    public ResponseEntity<?> test() throws Exception {
-        String diplomas = diplomaService.test();
+        List<DiplomaDetail> diplomas = diplomaService.getAllDiplomasFromNetwork();
         return ResponseEntity.status(200).body(diplomas);
     }
 
     @GetMapping("/search")
     public ResponseEntity<?> lookUp(LookUpDiplomaDTO params) {
-        System.out.println(params);
         List<DiplomaDTO> diplomas = diplomaService.lookUpDiploma(params);
         return ResponseEntity.status(200).body(diplomas);
     }
@@ -117,16 +107,13 @@ public class DiplomaController {
     @GetMapping(value = "/files/{filename:.+}")
     public ResponseEntity<Resource> getFile(@PathVariable String filename) {
         Resource file = FileUtil.load(filename);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
-                .contentType(MediaType.APPLICATION_PDF).body(file);
+        return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"").contentType(MediaType.APPLICATION_PDF).body(file);
     }
 
     @GetMapping("/pending-status")
     @PreAuthorize("hasAnyRole('PRINCIPAL')")
     public ResponseEntity<?> getAllDiplomasHasPendingStatus(@Valid PaginationParams params) {
-        Page<DiplomaDTO> pageDiplomaDTO = diplomaService.getAllDiplomasHasPendingStatus(params.getPage(),
-                params.getSize(), params.getSort(), params.getKeyword());
+        Page<DiplomaDTO> pageDiplomaDTO = diplomaService.getAllDiplomasHasPendingStatus(params.getPage(), params.getSize(), params.getSort(), params.getKeyword());
 
         PaginationResponse<DiplomaDTO> response = PaginationAndSortUtil.map(pageDiplomaDTO);
         return ResponseEntity.status(200).body(response);

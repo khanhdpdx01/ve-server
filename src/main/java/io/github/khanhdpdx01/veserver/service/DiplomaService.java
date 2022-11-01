@@ -12,7 +12,9 @@ import io.github.khanhdpdx01.veserver.repository.MajorRepository;
 import io.github.khanhdpdx01.veserver.repository.SpecialityRepository;
 import io.github.khanhdpdx01.veserver.util.CryptoUtil;
 import io.github.khanhdpdx01.veserver.util.FileUtil;
+import io.github.khanhdpdx01.veserver.util.IpfsUtil;
 import io.github.khanhdpdx01.veserver.util.PaginationAndSortUtil;
+import io.ipfs.api.IPFS;
 import org.apache.commons.lang3.StringUtils;
 import org.hyperledger.fabric.gateway.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,12 +34,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Properties;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 public class DiplomaService {
     private static String pemFileLocation;
+    private static String walletLocation;
     private final MajorRepository majorRepository;
     private final SpecialityRepository specialityRepository;
     private final SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
@@ -60,12 +63,12 @@ public class DiplomaService {
 
     public static Gateway connect(String connectionProfile) throws Exception {
         // Load a file system based wallet for managing identities.
-        Path walletPath = Paths.get("wallet");
+        Path walletPath = Paths.get(walletLocation);
         Wallet wallet = Wallets.newFileSystemWallet(walletPath);
         // load a CCP
         System.out.println(connectionProfile);
         Path networkConfigPath = Paths.get(connectionProfile);
-//        Path networkConfigPath = walletPath.resolve("connection.json");
+
         Gateway.Builder builder = Gateway.createBuilder();
 
         builder.identity(wallet, "admin").networkConfig(networkConfigPath).discovery(true);
@@ -77,34 +80,54 @@ public class DiplomaService {
         pemFileLocation = pemFileLocationArg;
     }
 
-    public List<DiplomaDTO> getAllDiplomasFromNetwork() throws Exception {
+    @Value("${storage.wallet-location}")
+    public void setWalletLocation(String walletLocationArg) {
+        walletLocation = walletLocationArg;
+    }
+
+    public List<DiplomaDetail> getAllDiplomasFromNetwork() throws Exception {
         byte[] result;
-        List<Diploma> diplomas;
+        List<DiplomaDetail> diplomas;
 
         Gateway gateway = connect(pemFileLocation);
         Network network = gateway.getNetwork(channel);
         Contract contract = network.getContract(chaincode);
 
+
         System.out.println("\n");
         result = contract.evaluateTransaction("GetAllDiplomas");
-        diplomas = new ObjectMapper().readValue(new String(result), new TypeReference<List<Diploma>>() {
+        diplomas = new ObjectMapper().readValue(new String(result), new TypeReference<List<DiplomaDetail>>() {
         });
 
-        return mapList(diplomas);
+        return diplomas;
     }
 
-    public Page<DiplomaDTO> getAllDiplomas(int page, int size, String[] sort, String keyword) {
+    public Page<DiplomaDTO> getAllDiplomas(int page, int size, String[] sort, String keyword, Integer majorId, Integer specialityId, Integer levelId, Integer rankId, Integer modeOfStudyId, Integer statusId) {
         Pageable pageable = PaginationAndSortUtil.create(page, size, sort);
+        String level = Level.getAllLevels().get(levelId);
+        String rank = Ranking.getAllRanks().get(rankId);
+        String modeOfStudy = ModeOfStudy.getAllModeOfStudies().get(modeOfStudyId);
+
+        String major = null, speciality = null;
+        if (majorId != null) {
+            Optional<Major> tmp = majorRepository.findById(majorId);
+            if (tmp.isPresent()) major = tmp.get().getName();
+        }
+
+        if (specialityId != null) {
+            Optional<Speciality> tmp = specialityRepository.findById(specialityId);
+            if (tmp.isPresent()) speciality = tmp.get().getName();
+        }
 
         Page<Diploma> pageRoom;
 
         if (keyword == null || StringUtils.isBlank(keyword)) {
-            pageRoom = diplomaRepository.findAll(pageable);
+            pageRoom = diplomaRepository.search(null, pageable, major, speciality, level, rank, modeOfStudy, statusId);
         } else {
-            pageRoom = diplomaRepository.search(keyword, pageable);
+            pageRoom = diplomaRepository.search(keyword, pageable, major, speciality, level, rank, modeOfStudy, statusId);
         }
 
-        List<DiplomaDTO> diplomaDTOs = mapList(pageRoom.getContent());
+        List<DiplomaDTO> diplomaDTOs = mapListDiplomaToDTO(pageRoom.getContent());
 
         return new PageImpl<>(diplomaDTOs, pageable, pageRoom.getTotalElements());
     }
@@ -159,16 +182,16 @@ public class DiplomaService {
             Network network = gateway.getNetwork(channel);
             Contract contract = network.getContract(chaincode);
 
-//            IPFS ipfs = new IPFS(ipfsHost, ipfsPort);
-//
-//            String diplomaLink = IpfsUtil.addContent(ipfs, FileUtil.loading(diploma.getDiplomaLink())).toString();
-//            String appendixLink = IpfsUtil.addContent(ipfs, FileUtil.loading(diploma.getAppendixLink())).toString();
+            IPFS ipfs = new IPFS(ipfsHost, ipfsPort);
 
-            String diplomaLink = diploma.getDiplomaLink();
-            String appendixLink = diploma.getDiplomaLink();
+            String diplomaLink = IpfsUtil.addContent(ipfs, FileUtil.loading(diploma.getDiplomaLink())).toString();
+            String appendixLink = IpfsUtil.addContent(ipfs, FileUtil.loading(diploma.getAppendixLink())).toString();
 
-            byte[] res = contract.submitTransaction("CreateDiploma",
-                    diploma.getSerialNumber(),
+//            String diplomaLink = diploma.getDiplomaLink();
+//            String appendixLink = diploma.getDiplomaLink();
+
+            Transaction transaction = contract.createTransaction("CreateDiploma");
+            byte[] res = transaction.submit(diploma.getSerialNumber(),
                     diploma.getUserId().trim(),
                     diploma.getFirstName().trim(),
                     diploma.getLastName().trim(),
@@ -195,6 +218,8 @@ public class DiplomaService {
                     appendixLink);
 
             diploma = new ObjectMapper().readValue(new String(res), Diploma.class);
+            diploma.setSerialNumber(serialNumber);
+            diploma.setTransactionId(transaction.getTransactionId());
             diplomaRepository.save(diploma);
 
         } catch (Exception e) {
@@ -227,7 +252,7 @@ public class DiplomaService {
                         localDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
 
                 System.out.println(new String((result)));
-                diplomaDTOs.addAll(mapList(new ObjectMapper().readValue(new String(result), new TypeReference<List<Diploma>>() {
+                diplomaDTOs.addAll(mapListDiplomaDetailToDTO(new ObjectMapper().readValue(new String(result), new TypeReference<List<DiplomaDetail>>() {
                 })));
             }
 
@@ -240,8 +265,8 @@ public class DiplomaService {
                 .collect(Collectors.toList());
     }
 
-    public DiplomaDetail getDiploma(String serialNumber) {
-        DiplomaDetail diplomaDetail = null;
+    public Diploma getDiploma(String serialNumber) {
+        Diploma diplomaResp = null;
 
         Diploma diploma = diplomaRepository.findById(serialNumber)
                 .orElseThrow(() -> new RuntimeException("Diploma is not found"));
@@ -256,18 +281,18 @@ public class DiplomaService {
                 if (serialNumber != null) {
                     result = contract.evaluateTransaction("SearchBySerialNumber", serialNumber);
                     System.out.println(new String(result));
-                    diplomaDetail = new ObjectMapper().readValue(new String(result), DiplomaDetail.class);
+                    diplomaResp = new ObjectMapper().readValue(new String(result), Diploma.class);
+                    diplomaResp.setSerialNumber(serialNumber);
+                    diplomaResp.setTransactionId(diploma.getTransactionId());
                 }
-
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             }
         } else {
-            diplomaDetail = new DiplomaDetail();
-            diplomaDetail.setDiploma(diploma);
+            diplomaResp = diploma;
         }
 
-        return diplomaDetail;
+        return diplomaResp;
     }
 
     public DiplomaDTO map(Diploma diploma) throws ParseException {
@@ -293,7 +318,13 @@ public class DiplomaService {
         return diplomaDTO;
     }
 
-    public List<DiplomaDTO> mapList(List<Diploma> diplomas) {
+    public Diploma mapDiploma(DiplomaDetail diplomaDetail) {
+        Diploma diploma = diplomaDetail.getRecord();
+        diploma.setSerialNumber(diplomaDetail.getKey());
+        return diploma;
+    }
+
+    public List<DiplomaDTO> mapListDiplomaToDTO(List<Diploma> diplomas) {
         List<DiplomaDTO> diplomaDTOS = new ArrayList<>();
         diplomas.forEach(diploma -> {
             try {
@@ -306,19 +337,20 @@ public class DiplomaService {
         return diplomaDTOS;
     }
 
-    public String test() {
-        byte[] result = new byte[0];
-        try {
-            Gateway gateway = connect(DiplomaService.pemFileLocation);
-            Network network = gateway.getNetwork(channel);
-            Contract contract = network.getContract(chaincode);
+    public List<DiplomaDTO> mapListDiplomaDetailToDTO(List<DiplomaDetail> diplomaDetails) {
+        List<DiplomaDTO> diplomaDTOS = new ArrayList<>();
 
-            result = contract.evaluateTransaction("Test");
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
+        diplomaDetails.forEach(diplomaDetail -> {
+            Diploma diploma;
+            try {
+                diploma = mapDiploma(diplomaDetail);
+                diplomaDTOS.add(map(diploma));
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+        });
 
-        return new String(result);
+        return diplomaDTOS;
     }
 
     public Page<DiplomaDTO> getAllDiplomasHasPendingStatus(int page, int size, String[] sort, String keyword) {
@@ -326,7 +358,7 @@ public class DiplomaService {
 
         Page<Diploma> pageRoom = diplomaRepository.getAllDiplomasHasPendingStatus(Status.PENDING.ordinal() + 1, pageable);
 
-        List<DiplomaDTO> diplomaDTOs = mapList(pageRoom.getContent());
+        List<DiplomaDTO> diplomaDTOs = mapListDiplomaToDTO(pageRoom.getContent());
 
         return new PageImpl<>(diplomaDTOs, pageable, pageRoom.getTotalElements());
     }
@@ -347,17 +379,15 @@ public class DiplomaService {
                 if (serialNumber != null) {
                     result = contract.evaluateTransaction("SearchBySerialNumber", serialNumber);
                     System.out.println(new String(result));
-                    DiplomaDetail diplomaDetail = new ObjectMapper().readValue(new String(result), DiplomaDetail.class);
-                    blcDiploma = diplomaDetail.getDiploma();
+                    blcDiploma = new ObjectMapper().readValue(new String(result), Diploma.class);
+                    blcDiploma.setSerialNumber(serialNumber);
+                    diploma.setTransactionId(null);
                 }
 
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             }
         }
-
-        System.out.println(diploma);
-        System.out.println(blcDiploma);
 
         String hash = CryptoUtil.sha256(SerializationUtils.serialize(diploma));
         String blcHash = CryptoUtil.sha256(SerializationUtils.serialize(blcDiploma));

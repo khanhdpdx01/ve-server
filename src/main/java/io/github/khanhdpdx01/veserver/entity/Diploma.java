@@ -2,6 +2,7 @@ package io.github.khanhdpdx01.veserver.entity;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 
 import javax.persistence.*;
@@ -10,6 +11,7 @@ import java.io.Serializable;
 @Getter
 @Setter
 @Entity
+@ToString
 @Accessors(chain = true)
 @Table
 public class Diploma implements Serializable {
@@ -40,6 +42,5 @@ public class Diploma implements Serializable {
     private String session;
     private String diplomaLink;
     private String appendixLink;
-    @Transient
     private String transactionId;
 }

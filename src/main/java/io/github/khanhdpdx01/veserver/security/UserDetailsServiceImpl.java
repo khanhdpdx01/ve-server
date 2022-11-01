@@ -29,7 +29,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         grandList.add(new SimpleGrantedAuthority(user.getRole()));
 
         UserPrinciple userPrinciple = new UserPrinciple(user.getUsername(),
-                user.getPassword(), grandList);
+                user.getPassword(), grandList, user.isActive());
         userPrinciple.setUserId(user.getUserId());
         userPrinciple.setRole(user.getRole());
 

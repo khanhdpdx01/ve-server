@@ -1,6 +1,5 @@
 package io.github.khanhdpdx01.veserver.controller;
 
-import io.github.khanhdpdx01.veserver.dto.user.CreateUserDTO;
 import io.github.khanhdpdx01.veserver.dto.user.UserPrinciple;
 import io.github.khanhdpdx01.veserver.security.JwtRequest;
 import io.github.khanhdpdx01.veserver.security.JwtResponse;
@@ -18,9 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
 
 import static io.github.khanhdpdx01.veserver.constant.AppConstant.ACCESS_TOKEN_COOKIE;
 
@@ -44,13 +41,14 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(), authenticationRequest.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-
         UserPrinciple userDetails = (UserPrinciple) authentication.getPrincipal();
-        System.out.println(userDetails.getAuthorities());
+
+        if (!userDetails.isActive()) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
         final String accessToken = jwtTokenUtil.generateToken(userDetails);
-
         Cookie accessTokenCookie = CookieFactory.create(ACCESS_TOKEN_COOKIE, accessToken);
-
         response.addCookie(accessTokenCookie);
 
         JwtResponse jwtResponse = new JwtResponse();
@@ -58,13 +56,5 @@ public class AuthController {
         jwtResponse.setAccessToken(accessToken);
 
         return ResponseEntity.status(200).body(jwtResponse);
-    }
-
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody CreateUserDTO createUserDTO,
-                                      HttpServletRequest request) {
-        io.github.khanhdpdx01.veserver.entity.User registered = userService.createUser(createUserDTO);
-
-        return ResponseEntity.status(200).body(registered);
     }
 }

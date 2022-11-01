@@ -12,8 +12,10 @@ import java.util.Collection;
 public class UserPrinciple extends User {
     private int userId;
     private String role;
+    private boolean active;
 
-    public UserPrinciple(String username, String password, Collection<? extends GrantedAuthority> authorities) {
+    public UserPrinciple(String username, String password, Collection<? extends GrantedAuthority> authorities, boolean active) {
         super(username, password, authorities);
+        this.active = active;
     }
 }

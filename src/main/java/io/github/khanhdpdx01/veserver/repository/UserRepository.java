@@ -1,6 +1,5 @@
 package io.github.khanhdpdx01.veserver.repository;
 
-import io.github.khanhdpdx01.veserver.entity.Diploma;
 import io.github.khanhdpdx01.veserver.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +13,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @Query("SELECT u from User u where u.username = :username")
     Optional<User> findByUsername(String username);
 
-    @Query("SELECT u from User u where u.username LIKE %:keyword%")
+    @Query("SELECT u from User u where u.username LIKE %:keyword% OR u.phoneNumber LIKE %:keyword%")
     Page<User> search(@Param("keyword") String keyword, Pageable pageable);
 }
