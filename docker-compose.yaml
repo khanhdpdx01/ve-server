@@ -1,49 +1,48 @@
 version: '3'
 networks:
   backend:
-     driver: bridge
+    driver: bridge
   frontend:
     driver: bridge
 
 services:
   be:  
-    image: khanhdpdx01/vecert-be:1.1
+    image: khanhdpdx01/vecert-be:1.4
     restart: always                    
-#    build:
-#       context: ../ve-be
     environment:
-      - SERVER_HOST=http://localhost:8080
-      - DATABASE_HOST=localhost
-      - DATABASE_PORT=3307
-      - DATABASE_NAME=vecert
+      - SERVER_HOST=http://192.168.51.111:8081
+      - DATABASE_HOST=192.168.51.111
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=vecert?useUnicode=yes&characterEncoding=UTF-8
       - DATABASE_ROOT_USER=root
       - DATABASE_ROOT_PASSWORD=root
-      - FABRIC_CHANNEL_NAME=demo
-      - FABRIC_CHAINCODE_NAME=qlvb1
+      - FABRIC_CHANNEL_NAME=mychannel
+      - FABRIC_CHAINCODE_NAME=qlvbcc
       - FABRIC_EXPLORER_HOST=
-      - IPFS_HOST=localhost
+      - IPFS_HOST=192.168.51.111
       - IPFS_PORT=5002
-    # command: docker rmi $$(docker images --filter "dangling=true" -q --no-trunc)
+      - IMAGE_LOCATION=/app/image
+      - WALLET_LOCATION=/app/wallet
     volumes:
-      - ../ve-be/wallet/connection.json:/app/connection.json
-      - ../ve-be/wallet:/app/wallet
-      - ../ve-be/image:/app/image
+      - /home/khanh/VTS/vecert-network/organizations/peerOrganizations/issuer.com/connection-org1.json:/app/connection.json
+      - /home/khanh/VTS/ve-be/image:/app/image
+      - /home/khanh/VTS/ve-be/wallet:/app/wallet
     ports:                              
       - "3000:3000" 
     networks:
       - backend
 
   fe:                         
-    image: khanhdpdx01/vecert-fe:1.0
+    image: khanhdpdx01/vecert-fe:1.2
     restart: always                  
-#    build:
-#       context: ../vecert-fe
+    build:
+      args:
+      - VUE_APP_SERVICE_ENDPOINT=http://192.168.51.111:3000
+      - VUE_APP_IPFS_ENDPOINT=http://192.168.51.111:8082
+      - VUE_APP_EXPLORER_ENDPOINT=http://192.168.51.111:8080
+      - VUE_APP_TOTAL_ITEMS=10
     ports:
-      - "8080:80"                     
+      - "8081:8080"                     
     networks:
       - frontend
-  
-  
-    
-
   
