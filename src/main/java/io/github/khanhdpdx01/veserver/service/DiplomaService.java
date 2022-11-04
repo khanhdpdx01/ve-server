@@ -139,6 +139,9 @@ public class DiplomaService {
         Major major = majorRepository.findById(addDiplomaForm.getMajorId())
                 .orElseThrow(() -> new RuntimeException("Major is not found"));
 
+        diplomaRepository.findById(addDiplomaForm.getSerialNumber)
+                .orElseThrow(() -> new RuntimeException("Diploma is existed"));
+
         FileUtil.save(files.get(0));
         FileUtil.save(files.get(1));
 
@@ -152,8 +155,8 @@ public class DiplomaService {
                 .setPlaceOfBirth(addDiplomaForm.getPlaceOfBirth())
                 .setGrade(addDiplomaForm.getGrade())
                 .setLevel(Level.getAllLevels().get(addDiplomaForm.getLevelId()))
-                .setRank(Ranking.getAllRanks().get(addDiplomaForm.getRankId())).
-                setModeOfStudy(ModeOfStudy.getAllModeOfStudies().get(addDiplomaForm.getModeOfStudy()))
+                .setRank(Ranking.getAllRanks().get(addDiplomaForm.getRankId()))
+                .setModeOfStudy(ModeOfStudy.getAllModeOfStudies().get(addDiplomaForm.getModeOfStudy()))
                 .setSpeciality(speciality.getName())
                 .setGraduation(addDiplomaForm.getGraduation())
                 .setDateOfGraduation(formatter.format(addDiplomaForm.getDateOfGraduate()))
