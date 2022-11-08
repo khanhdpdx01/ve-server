@@ -14,8 +14,7 @@ public class UserPrinciple extends User {
     private String role;
     private boolean active;
 
-    public UserPrinciple(String username, String password, Collection<? extends GrantedAuthority> authorities, boolean active) {
+    public UserPrinciple(String username, String password, Collection<? extends GrantedAuthority> authorities) {
         super(username, password, authorities);
-        this.active = active;
     }
 }

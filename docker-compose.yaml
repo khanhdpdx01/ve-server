@@ -7,10 +7,8 @@ networks:
 
 services:
   be:  
-    # image: khanhdpdx01/vecert-be:1.2
+    image: khanhdpdx01/vecert-be:1.5
     restart: always                    
-    build:
-      context: ../ve-be
     environment:
       - SERVER_HOST=http://192.168.40.49:8081
       - DATABASE_HOST=10.30.176.54
@@ -36,10 +34,9 @@ services:
       - backend
 
   fe:                         
-    # image: khanhdpdx01/vecert-fe:1.0
+    image: khanhdpdx01/vecert-fe:1.3
     restart: always                  
     build:
-      context: ../vecert-fe
       args:
       - VUE_APP_SERVICE_ENDPOINT=http://192.168.40.49:3000
       - VUE_APP_IPFS_ENDPOINT=http://10.30.176.54:8080

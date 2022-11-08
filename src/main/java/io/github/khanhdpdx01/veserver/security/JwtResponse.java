@@ -7,5 +7,6 @@ import lombok.Setter;
 @Setter
 public class JwtResponse {
     private String role;
+    private String username;
     private String accessToken;
 }

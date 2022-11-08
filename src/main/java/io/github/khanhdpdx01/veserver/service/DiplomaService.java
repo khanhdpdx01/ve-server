@@ -139,7 +139,7 @@ public class DiplomaService {
         Major major = majorRepository.findById(addDiplomaForm.getMajorId())
                 .orElseThrow(() -> new RuntimeException("Major is not found"));
 
-        diplomaRepository.findById(addDiplomaForm.getSerialNumber)
+        diplomaRepository.findById(addDiplomaForm.getSerialNumber())
                 .orElseThrow(() -> new RuntimeException("Diploma is existed"));
 
         FileUtil.save(files.get(0));

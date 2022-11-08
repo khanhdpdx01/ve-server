@@ -53,6 +53,7 @@ public class AuthController {
 
         JwtResponse jwtResponse = new JwtResponse();
         jwtResponse.setRole(userDetails.getRole());
+        jwtResponse.setUsername(userDetails.getUsername());
         jwtResponse.setAccessToken(accessToken);
 
         return ResponseEntity.status(200).body(jwtResponse);
