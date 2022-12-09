@@ -12,7 +12,6 @@ services:
     # build:
     #   context: ../ve-be
     environment:
-      - SERVER_HOST=http://192.168.40.49:8081
       - DATABASE_HOST=10.30.176.54
       - DATABASE_PORT=32221
       - DATABASE_NAME=vecert?useUnicode=yes&characterEncoding=UTF-8
@@ -36,18 +35,17 @@ services:
       - backend
 
   fe:                         
-    image: khanhdpdx01/vecert-fe:1.5
+    image: khanhdpdx01/vecert-fe:1.7
     restart: always                  
     # build:
     #   context: ../vecert-fe
     environment:
-    - NODE_ENV=production
     - VUE_APP_SERVICE_ENDPOINT=http://192.168.40.49:3000
     - VUE_APP_IPFS_ENDPOINT=http://10.30.176.54:8080
     - VUE_APP_EXPLORER_ENDPOINT=http://10.30.176.54:31898
     - VUE_APP_TOTAL_ITEMS=10
     ports:
-      - "8081:8080"                     
+      - "9093:9093"                 
     networks:
       - frontend
   
