@@ -22,7 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import static io.github.khanhdpdx01.veserver.constant.AppConstant.ACCESS_TOKEN_COOKIE;
 
 @RestController
-@RequestMapping("auth")
+@RequestMapping("/vecert/auth")
 public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenUtil jwtTokenUtil;

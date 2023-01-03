@@ -16,7 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
 @RestController
-@RequestMapping("admin")
+@RequestMapping("/vecert/admin")
 public class UserController {
     private final UserService userService;
 

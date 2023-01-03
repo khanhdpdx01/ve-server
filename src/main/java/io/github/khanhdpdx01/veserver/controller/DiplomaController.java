@@ -25,7 +25,7 @@ import java.io.InputStream;
 import java.util.List;
 
 @RestController
-@RequestMapping("/diplomas")
+@RequestMapping("/vecert/diplomas")
 public class DiplomaController {
     private final MajorRepository majorRepository;
     private final SpecialityRepository specialityRepository;
